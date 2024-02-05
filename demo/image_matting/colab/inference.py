@@ -112,11 +112,11 @@ if __name__ == '__main__':
         _, _, matte = modnet(im.cuda() if torch.cuda.is_available() else im, True)
 
         # resize and save matte
-        # matte = F.interpolate(matte, size=(im_h, im_w), mode='area')
-        # matte = matte[0][0].data.cpu().numpy()
-        # matte_name = im_name.split('.')[0] + '-mask.png'
+        matte = F.interpolate(matte, size=(im_h, im_w), mode='area')
+        matte = matte[0][0].data.cpu().numpy()
+        matte_name = im_name.split('.')[0] + '-mask.png'
 
-        # matteAlpha = Image.fromarray(((matte * 255).astype('uint8')), mode='L')
+        matteAlpha = Image.fromarray(((matte * 255).astype('uint8')), mode='L')
         # matteAlpha.save(os.path.join(args.output_path, matte_name))
 
         # save original image with alpha channel
