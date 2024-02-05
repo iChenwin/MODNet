@@ -11,7 +11,6 @@ import torchvision.transforms as transforms
 
 from src.models.modnet import MODNet
 
-
 if __name__ == '__main__':
     # define cmd arguments
     parser = argparse.ArgumentParser()
@@ -60,7 +59,20 @@ if __name__ == '__main__':
         print('Process image: {0}'.format(im_name))
 
         # read image
-        im = Image.open(os.path.join(args.input_path, im_name))
+        try:
+            im = Image.open(os.path.join(args.input_path, im_name))
+        except:
+            print('Not an image     : {0}' . format(im_name))
+            continue
+
+        # check for already processed images - and do not re-process them
+        processedMaskFile = args.output_path + "/" + im_name.split('.')[0] + '-mask.png'
+        processedAlphaFile = args.output_path + "/" + im_name.split('.')[0] + '-alpha.png'
+        if os.path.isfile(processedMaskFile) and os.path.isfile(processedAlphaFile):
+            print('Already processed: {0}' . format(im_name))
+            continue
+        else:
+            print('Processing       :  {0}' . format(im_name))
 
         # unify image channels to 3
         im = np.asarray(im)
@@ -90,21 +102,25 @@ if __name__ == '__main__':
         else:
             im_rh = im_h
             im_rw = im_w
-        
+
         im_rw = im_rw - im_rw % 32
         im_rh = im_rh - im_rh % 32
+
         im = F.interpolate(im, size=(im_rh, im_rw), mode='area')
 
         # inference
         _, _, matte = modnet(im.cuda() if torch.cuda.is_available() else im, True)
 
         # resize and save matte
-        # matte = F.interpolate(matte, size=(im_h, im_w), mode='area')
-        # matte = matte[0][0].data.cpu().numpy()
-        # matte_name = im_name.split('.')[0] + '.png'
-        # Image.fromarray(((matte * 255).astype('uint8')), mode='L').save(os.path.join(args.output_path, matte_name))
-
+        matte = F.interpolate(matte, size=(im_h, im_w), mode='area')
         matte = matte[0][0].data.cpu().numpy()
-        matte_rgba = np.stack((matte, matte, matte, matte * 255), axis=-1)  # Assuming matte values are in [0, 1] range
-        matte_name = im_name.split('.')[0] + '.png'
-        Image.fromarray(matte_rgba.astype('uint8')).save(os.path.join(args.output_path, matte_name))
+        matte_name = im_name.split('.')[0] + '-mask.png'
+
+        matteAlpha = Image.fromarray(((matte * 255).astype('uint8')), mode='L')
+        matteAlpha.save(os.path.join(args.output_path, matte_name))
+
+        # save original image with alpha channel
+        alpha_image_name = im_name.split('.')[0] + '-alpha.png'
+        alphaImage = Image.open(os.path.join(args.input_path, im_name))
+        alphaImage.putalpha(matteAlpha)
+        alphaImage.save(os.path.join(args.output_path, alpha_image_name))
