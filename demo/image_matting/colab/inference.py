@@ -99,7 +99,12 @@ if __name__ == '__main__':
         _, _, matte = modnet(im.cuda() if torch.cuda.is_available() else im, True)
 
         # resize and save matte
-        matte = F.interpolate(matte, size=(im_h, im_w), mode='area')
+        # matte = F.interpolate(matte, size=(im_h, im_w), mode='area')
+        # matte = matte[0][0].data.cpu().numpy()
+        # matte_name = im_name.split('.')[0] + '.png'
+        # Image.fromarray(((matte * 255).astype('uint8')), mode='L').save(os.path.join(args.output_path, matte_name))
+
         matte = matte[0][0].data.cpu().numpy()
+        matte_rgba = np.stack((matte, matte, matte, matte * 255), axis=-1)  # Assuming matte values are in [0, 1] range
         matte_name = im_name.split('.')[0] + '.png'
-        Image.fromarray(((matte * 255).astype('uint8')), mode='L').save(os.path.join(args.output_path, matte_name))
+        Image.fromarray(matte_rgba.astype('uint8')).save(os.path.join(args.output_path, matte_name))
